@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { serverClient } from "@/lib/supabase";
+import { serverClient, isVotingOpen } from "@/lib/supabase";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
+
+// Max file size: 5 MB (slips are tiny)
 const MAX_BYTES = 5 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
-  // Rate limit: 5 slip verifications per minute per IP (protects SlipOK quota)
+  // Rate limit: 3 slip verifications per minute per IP (protects SlipOK quota)
   const ip = getClientIp(req.headers);
   const rl = rateLimit(`verify:${ip}`, 3, 60_000);
   if (!rl.ok) {
@@ -15,6 +17,7 @@ export async function POST(req: NextRequest) {
       { status: 429 }
     );
   }
+
   try {
     const fd = await req.formData();
     const file = fd.get("slip") as File | null;
@@ -31,6 +34,11 @@ export async function POST(req: NextRequest) {
     }
 
     const sb = serverClient();
+
+    // Block new awards if voting closed
+    if (!(await isVotingOpen())) {
+      return NextResponse.json({ error: "Voting is currently closed" }, { status: 403 });
+    }
 
     // 1. Load + check the intent
     const { data: intent } = await sb
@@ -82,7 +90,6 @@ export async function POST(req: NextRequest) {
     if (!slipRes.ok) {
       const text = await slipRes.text();
       console.error("SlipOK error:", slipRes.status, text);
-      // SlipOK returns 400 with reason for invalid/duplicate slips
       try {
         const j = JSON.parse(text);
         return NextResponse.json(
@@ -101,17 +108,9 @@ export async function POST(req: NextRequest) {
 
     const { amount, transRef, receiver } = slipData.data;
 
-    // 3. CRITICAL: verify amount and recipient match this intent
-    if (Number(amount) !== Number(intent.amount_baht)) {
-      return NextResponse.json(
-        { error: `Amount mismatch: paid ${amount}฿ but expected ${intent.amount_baht}฿` },
-        { status: 400 }
-      );
-    }
-
+    // 3. Recipient check — must match our PromptPay account (no recovery from this)
     const expectedPpid = (process.env.PROMPTPAY_ID || "").replace(/\D/g, "");
     const slipPpid = String(receiver?.proxy?.value || "").replace(/\D/g, "");
-    // Accept match on suffix (some banks store with/without leading zero or country code)
     if (
       !slipPpid ||
       !(expectedPpid.endsWith(slipPpid) || slipPpid.endsWith(expectedPpid))
@@ -123,10 +122,59 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Slip missing transaction reference" }, { status: 400 });
     }
 
-    // 4. Atomic award (function rejects if transRef already used or status changed)
-    const points = Math.floor(intent.amount_baht / 10);
+    // 4. Amount handling: if slip amount differs from intent amount, auto-recover
+    //    by cancelling the original intent and creating a new one matching what was paid.
+    //    This prevents wasting a real payment when user picked the wrong amount.
+    let workingIntentId: string = intentId;
+    let workingAmount: number = Number(intent.amount_baht);
+
+    if (Number(amount) !== Number(intent.amount_baht)) {
+      const slipAmount = Number(amount);
+
+      // Need at least 10฿ minimum and within reasonable max
+      if (!Number.isInteger(slipAmount) || slipAmount < 10 || slipAmount > 100000) {
+        return NextResponse.json(
+          { error: `Slip amount ${slipAmount}฿ is outside the allowed range (10–100,000฿)` },
+          { status: 400 }
+        );
+      }
+
+      // Cancel the original intent
+      await sb
+        .from("payment_intents")
+        .update({ status: "rejected" })
+        .eq("id", intentId);
+
+      // Round down to nearest 10฿ for valid vote intent
+      const flooredAmount = Math.floor(slipAmount / 10) * 10;
+
+      const { data: newIntent, error: newErr } = await sb
+        .from("payment_intents")
+        .insert({
+          candidate_id: intent.candidate_id,
+          amount_baht: flooredAmount,
+          reference_number: `RECOVER-${transRef.slice(0, 12)}-${Date.now()}`,
+          status: "pending"
+        })
+        .select("id")
+        .single();
+
+      if (newErr || !newIntent) {
+        console.error("Recovery intent creation failed:", newErr);
+        return NextResponse.json(
+          { error: "Could not recover from amount mismatch. Please try again." },
+          { status: 500 }
+        );
+      }
+
+      workingIntentId = newIntent.id;
+      workingAmount = flooredAmount;
+    }
+
+    // 5. Atomic award (function rejects if transRef already used or status changed)
+    const points = Math.floor(workingAmount / 10);
     const { error: rpcErr } = await sb.rpc("verify_and_award_votes", {
-      p_intent_id: intentId,
+      p_intent_id: workingIntentId,
       p_trans_ref: transRef,
       p_points: points
     });
