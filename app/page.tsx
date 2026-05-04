@@ -50,7 +50,7 @@ export default async function HomePage() {
         <div className="flex marquee whitespace-nowrap font-display text-2xl italic">
           {Array.from({ length: 4 }).map((_, i) => (
             <span key={i} className="mr-12">
-              ✦ ten baht equals one point ✦ scan · pay · vote ✦ powered by PromptPay ✦ ten baht equals one point ✦
+             ✦  ten baht equals one point  ✦  scan · pay · vote  ✦  10 บาท เท่ากับ 1 คะแนน ✦ แสกน · จ่าย · โหวต
             </span>
           ))}
         </div>

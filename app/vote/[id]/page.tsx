@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { unstable_noStore as noStore } from "next/cache";
 import { serverClient, type Candidate } from "@/lib/supabase";
 import VoteFlow from "@/components/VoteFlow";
 
@@ -11,6 +12,7 @@ export default async function VotePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  noStore();
   const sb = serverClient();
   const { data: candidate } = await sb
     .from("candidates")
