@@ -33,7 +33,7 @@ export default async function HomePage() {
           <p className="font-mono text-xs tracking-[0.3em] uppercase text-muted">
             Vol. 01 · Edition Live
           </p>
-          <h1 className="font-display text-6xl md:text-6xl font-extrabold leading-[0.9] mt-2">
+          <h1 className="font-display text-5xl md:text-6xl font-extrabold leading-[0.9] mt-2">
             Populavote RBBand 2026 
           </h1>
         </div>
@@ -47,10 +47,10 @@ export default async function HomePage() {
 
       {/* Marquee strip */}
       <div className="overflow-hidden border-y border-ink/20 py-3 mb-12 rise" style={{ animationDelay: "0.1s" }}>
-        <div className="flex marquee whitespace-nowrap font-display text-2xl italic">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="flex marquee whitespace-nowrap font-display text-xl md:text-2xl italic">
+          {Array.from({ length: 6 }).map((_, i) => (
             <span key={i} className="mr-12">
-             ✦  ten baht equals one point  ✦  scan · pay · vote  ✦  10 บาท เท่ากับ 1 คะแนน ✦ แสกน · จ่าย · โหวต
+              ✦ ten baht equals one point ✦ scan · pay · vote ✦ powered by PromptPay&nbsp;
             </span>
           ))}
         </div>
