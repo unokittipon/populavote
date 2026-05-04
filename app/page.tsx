@@ -34,7 +34,7 @@ export default async function HomePage() {
             Vol. 01 · Edition Live
           </p>
           <h1 className="font-display text-6xl md:text-8xl font-extrabold leading-[0.9] mt-2">
-            Populavote
+            Populavote RBBand 2026 
           </h1>
         </div>
         <Link
@@ -124,3 +124,5 @@ function Stat({ label, value, className = "" }: { label: string; value: string; 
     </div>
   );
 }
+
+
