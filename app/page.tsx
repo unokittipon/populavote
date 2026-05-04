@@ -34,8 +34,11 @@ export default async function HomePage() {
             Vol. 01 · Edition Live
           </p>
           <h1 className="font-display text-5xl md:text-6xl font-extrabold leading-[0.9] mt-2">
-            Populavote RBBand 2026 
+            Populavote
           </h1>
+          <p className="font-display text-xl md:text-2xl italic text-muted mt-1">
+            RBBand 2026
+          </p>
         </div>
         <Link
           href="/results"
