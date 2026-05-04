@@ -33,7 +33,7 @@ export default async function HomePage() {
           <p className="font-mono text-xs tracking-[0.3em] uppercase text-muted">
             Vol. 01 · Edition Live
           </p>
-          <h1 className="font-display text-6xl md:text-8xl font-extrabold leading-[0.9] mt-2">
+          <h1 className="font-display text-6xl md:text-6xl font-extrabold leading-[0.9] mt-2">
             Populavote RBBand 2026 
           </h1>
         </div>
