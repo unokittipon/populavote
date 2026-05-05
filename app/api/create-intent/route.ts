@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   // Rate limit: 10 intents per minute per IP
   
   const ip = getClientIp(req.headers);
-  const rl = rateLimit(`intent:${ip}`, 10, 60_000);
+  const rl = rateLimit(`intent:${ip}`, 200, 60_000);
   
   if (!rl.ok) {
     return NextResponse.json(

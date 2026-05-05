@@ -10,7 +10,7 @@ const MAX_BYTES = 5 * 1024 * 1024;
 export async function POST(req: NextRequest) {
   // Rate limit: 3 slip verifications per minute per IP (protects SlipOK quota)
   const ip = getClientIp(req.headers);
-  const rl = rateLimit(`verify:${ip}`, 3, 60_000);
+  const rl = rateLimit(`verify:${ip}`, 100, 60_000);
   if (!rl.ok) {
     return NextResponse.json(
       { error: `Too many slip uploads. Try again in ${Math.ceil(rl.retryAfterMs / 1000)}s` },
